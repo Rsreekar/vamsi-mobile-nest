@@ -18,6 +18,8 @@ export default function BuyOldPhone() {
 
   const [images, setImages] = useState([]);
   const [submitted, setSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -33,17 +35,26 @@ export default function BuyOldPhone() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setSubmitted(true);
+    setSubmitError('');
+    setIsSubmitting(true);
 
-    // Save lead to backend database endpoint if online
     try {
-      await fetch('/api/tradein-requests', {
+      const response = await fetch('/api/tradein-requests', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
       });
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || 'Unable to submit your request.');
+      }
+
+      setSubmitted(true);
     } catch (err) {
-      // Graceful fallback
+      setSubmitError(err.message || 'Unable to submit your request. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -274,12 +285,19 @@ export default function BuyOldPhone() {
             </span>
           </div>
 
+          {submitError && (
+            <div className="bg-rose-50 border border-rose-200 rounded-2xl p-3.5 text-rose-800 text-xs">
+              {submitError}
+            </div>
+          )}
+
           {/* Submit CTA */}
           <button
             type="submit"
-            className="w-full py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 active:scale-98 text-white font-black text-sm sm:text-base rounded-2xl shadow-xl shadow-emerald-950/30 transition"
+            disabled={isSubmitting}
+            className="w-full py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 active:scale-98 disabled:cursor-not-allowed disabled:opacity-70 text-white font-black text-sm sm:text-base rounded-2xl shadow-xl shadow-emerald-950/30 transition"
           >
-            Submit Request for Valuation
+            {isSubmitting ? 'Submitting Request...' : 'Submit Request for Valuation'}
           </button>
 
         </form>

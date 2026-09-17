@@ -4,7 +4,6 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 let pool = null;
-let isConnected = false;
 
 const dbConfig = {
   host: process.env.DB_HOST || 'localhost',
@@ -22,20 +21,17 @@ try {
   pool.getConnection()
     .then(conn => {
       console.log('✅ Connected to MySQL Database:', process.env.DB_NAME || 'vamsi_mobile_nest');
-      isConnected = true;
       conn.release();
     })
     .catch(err => {
       console.log('ℹ️ MySQL not reachable locally. Running Express API server in zero-config dev mode.');
-      isConnected = false;
     });
 } catch (error) {
   console.log('ℹ️ Running Express API server in zero-config dev mode.');
-  isConnected = false;
 }
 
 export const query = async (sql, params = []) => {
-  if (pool && isConnected) {
+  if (pool) {
     try {
       const [results] = await pool.execute(sql, params);
       return results;

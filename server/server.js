@@ -13,6 +13,7 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const IS_PRODUCTION = process.env.VERCEL === '1' || process.env.NODE_ENV === 'production';
 
 // Security & Parsing Middleware
 app.use(helmet({ contentSecurityPolicy: false }));
@@ -83,34 +84,43 @@ app.get('/api/services', async (req, res) => {
 
 // POST /api/tradein-requests (Submit old phone valuation)
 app.post('/api/tradein-requests', async (req, res) => {
-  try {
-    const { name, phone, whatsapp, brand, model, storage, condition, expectedPrice, notes } = req.body;
-    
-    const newLead = {
-      id: Date.now(),
-      customer_name: name,
-      phone,
-      whatsapp: whatsapp || phone,
-      brand,
-      model,
-      storage,
-      physical_condition: condition,
-      expected_price: expectedPrice,
-      notes,
-      status: 'Pending',
-      created_at: new Date()
-    };
-    
-    TRADEIN_LEADS.unshift(newLead);
+  const { name, phone, whatsapp, brand, model, storage, condition, expectedPrice, notes } = req.body;
+  const newLead = {
+    id: Date.now(),
+    customer_name: name,
+    phone,
+    whatsapp: whatsapp || phone,
+    brand,
+    model,
+    storage,
+    physical_condition: condition,
+    expected_price: expectedPrice,
+    notes,
+    status: 'Pending',
+    created_at: new Date()
+  };
 
-    await query(
+  try {
+    const result = await query(
       'INSERT INTO tradein_requests (customer_name, phone, whatsapp, brand, model, storage, physical_condition, expected_price, notes, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       [name, phone, whatsapp || phone, brand, model, storage, condition, expectedPrice, notes, 'Pending']
     );
 
+    if (IS_PRODUCTION && !result) {
+      throw new Error('Persistent database is not configured.');
+    }
+
+    if (!IS_PRODUCTION) TRADEIN_LEADS.unshift(newLead);
+
     return res.status(201).json({ success: true, message: 'Trade-in valuation request submitted successfully.', lead: newLead });
   } catch (error) {
-    return res.status(200).json({ success: true, message: 'Request received successfully.' });
+    if (IS_PRODUCTION) {
+      console.error('Trade-in request was not saved:', error.message);
+      return res.status(503).json({ success: false, message: 'Requests are temporarily unavailable. Please contact the store directly.' });
+    }
+
+    TRADEIN_LEADS.unshift(newLead);
+    return res.status(201).json({ success: true, message: 'Request received successfully.', lead: newLead });
   }
 });
 
@@ -118,11 +128,15 @@ app.post('/api/tradein-requests', async (req, res) => {
 app.get('/api/tradein-requests', async (req, res) => {
   try {
     const dbResults = await query('SELECT * FROM tradein_requests ORDER BY created_at DESC');
-    if (dbResults && dbResults.length > 0) {
+    if (Array.isArray(dbResults)) {
       return res.json({ total: dbResults.length, leads: dbResults });
+    }
+    if (IS_PRODUCTION) {
+      return res.status(503).json({ error: 'Persistent database is not configured.' });
     }
     return res.json({ total: TRADEIN_LEADS.length, leads: TRADEIN_LEADS });
   } catch (error) {
+    if (IS_PRODUCTION) return res.status(503).json({ error: 'Unable to load stored requests.' });
     return res.json({ total: TRADEIN_LEADS.length, leads: TRADEIN_LEADS });
   }
 });
@@ -158,18 +172,21 @@ app.delete('/api/tradein-requests/:id', async (req, res) => {
 
 // POST /api/enquiries (Contact form queries)
 app.post('/api/enquiries', async (req, res) => {
-  try {
-    const { name, phone, category, message } = req.body;
-    const newEnquiry = { id: Date.now(), customer_name: name, phone, category, message, status: 'Pending', created_at: new Date() };
-    STORE_ENQUIRIES.unshift(newEnquiry);
+  const { name, phone, category, message } = req.body;
+  const newEnquiry = { id: Date.now(), customer_name: name, phone, category, message, status: 'Pending', created_at: new Date() };
 
-    await query(
+  try {
+    const result = await query(
       'INSERT INTO store_enquiries (customer_name, phone, category, message, status) VALUES (?, ?, ?, ?, ?)',
       [name, phone, category, message, 'Pending']
     );
+    if (IS_PRODUCTION && !result) throw new Error('Persistent database is not configured.');
+    if (!IS_PRODUCTION) STORE_ENQUIRIES.unshift(newEnquiry);
     return res.status(201).json({ success: true, message: 'Enquiry submitted successfully.' });
   } catch (error) {
-    return res.status(200).json({ success: true, message: 'Enquiry received successfully.' });
+    if (IS_PRODUCTION) return res.status(503).json({ success: false, message: 'Enquiries are temporarily unavailable. Please contact the store directly.' });
+    STORE_ENQUIRIES.unshift(newEnquiry);
+    return res.status(201).json({ success: true, message: 'Enquiry received successfully.' });
   }
 });
 
@@ -177,11 +194,13 @@ app.post('/api/enquiries', async (req, res) => {
 app.get('/api/enquiries', async (req, res) => {
   try {
     const dbResults = await query('SELECT * FROM store_enquiries ORDER BY created_at DESC');
-    if (dbResults && dbResults.length > 0) {
+    if (Array.isArray(dbResults)) {
       return res.json({ total: dbResults.length, enquiries: dbResults });
     }
+    if (IS_PRODUCTION) return res.status(503).json({ error: 'Persistent database is not configured.' });
     return res.json({ total: STORE_ENQUIRIES.length, enquiries: STORE_ENQUIRIES });
   } catch (error) {
+    if (IS_PRODUCTION) return res.status(503).json({ error: 'Unable to load stored enquiries.' });
     return res.json({ total: STORE_ENQUIRIES.length, enquiries: STORE_ENQUIRIES });
   }
 });
