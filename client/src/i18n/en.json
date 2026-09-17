@@ -1,0 +1,36 @@
+{
+  "nav": {
+    "home": "Home",
+    "sellOldPhone": "Sell Your Old Phone",
+    "accessories": "Accessories",
+    "services": "Services",
+    "contact": "Contact Us",
+    "about": "About Us",
+    "whatsappChat": "WhatsApp Us"
+  },
+  "hero": {
+    "title": "Your Trusted Mobile Store in Mangalagiri",
+    "subtitle": "Mobile accessories, screen replacements, repairs and top cash for your old phones — all under one roof.",
+    "sellOldPhone": "Sell Your Old Phone",
+    "chatWhatsapp": "Chat on WhatsApp",
+    "getDirections": "Get Directions"
+  },
+  "trust": {
+    "repairs": "Mobile Repairs",
+    "sellOld": "Sell Your Old Phone",
+    "accessories": "Accessories"
+  },
+  "storeInfo": {
+    "address": "1-563, Hospitals Road, Near New Bus Stand, Mangalagiri – 522503, Andhra Pradesh, India",
+    "hours": "Mon–Sat: 10:00 AM – 10:00 PM | Sun: 11:00 AM – 1:00 PM",
+    "phone": "9948800022",
+    "whatsapp": "9948800033"
+  },
+  "actions": {
+    "enquireWhatsapp": "Enquire on WhatsApp",
+    "callStore": "Call Store",
+    "viewDetails": "View Details",
+    "submit": "Submit Request",
+    "requestValuation": "Request Evaluation"
+  }
+}
